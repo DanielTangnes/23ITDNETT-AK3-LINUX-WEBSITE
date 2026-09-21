@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'])) {
 <body>
     <h1>Welcome</h1>
     <form method="post">
-        <label for="name">What's your name?</label>
+        <label for="name">Dette er en test</label>
         <input type="text" id="name" name="name" placeholder="Type your name" value="<?= htmlspecialchars($name) ?>">
         <button type="submit">Say hello</button>
     </form>
