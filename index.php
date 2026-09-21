@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple PHP Site</title>
+    <title>AK3 LinuxServerDrift</title>
     <style>
         body {
             font-family: system-ui, sans-serif;
