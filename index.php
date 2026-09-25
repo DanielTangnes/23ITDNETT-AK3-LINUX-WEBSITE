@@ -1,7 +1,34 @@
 <?php
-$name = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'])) {
-    $name = trim($_POST['name']);
+$error = '';
+$messages = [];
+
+try {
+    $pdo = new PDO(
+        sprintf('pgsql:host=%s;port=%s;dbname=%s', getenv('DB_HOST'), getenv('DB_PORT'), getenv('DB_NAME')),
+        getenv('DB_USER'), getenv('DB_PASS'),
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $author = trim($_POST['author'] ?? '');
+        $body   = trim($_POST['body'] ?? '');
+
+        if ($author === '' || $body === '') {
+            $error = 'Both name and message are required.';
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO messages (author, body) VALUES (:author, :body)');
+            $stmt->execute([':author' => $author, ':body' => $body]);
+
+            // Redirect so a page refresh doesn't submit the form again
+            header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+            exit;
+        }
+    }
+
+    $messages = $pdo->query('SELECT author, body, created_at FROM messages ORDER BY created_at DESC LIMIT 20')->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log($e->getMessage());
+    $error = 'Could not connect to the database.';
 }
 ?>
 <!DOCTYPE html>
@@ -18,9 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'])) {
             padding: 0 20px;
             text-align: center;
         }
-        input[type="text"] {
+        input[type="text"], textarea {
             padding: 8px;
             font-size: 16px;
+            font-family: inherit;
             width: 100%;
             box-sizing: border-box;
             margin: 12px 0;
@@ -30,23 +58,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'])) {
             font-size: 16px;
             cursor: pointer;
         }
-        .greeting {
+        .error {
             margin-top: 24px;
-            font-size: 20px;
-            color: #2a6;
+            color: #c33;
+        }
+        .messages {
+            list-style: none;
+            padding: 0;
+            margin-top: 32px;
+            text-align: left;
+        }
+        .messages li {
+            border-top: 1px solid #ddd;
+            padding: 12px 0;
+        }
+        .messages .meta {
+            font-size: 13px;
+            color: #777;
         }
     </style>
 </head>
 <body>
     <h1>Welcome</h1>
     <form method="post">
-        <label for="name">Test deploy</label>
-        <input type="text" id="name" name="name" placeholder="Type your name" value="<?= htmlspecialchars($name) ?>">
-        <button type="submit">Say hello</button>
+        <label for="author">Test deploy</label>
+        <input type="text" id="author" name="author" placeholder="Your name" required value="<?= htmlspecialchars($_POST['author'] ?? '') ?>">
+        <textarea id="body" name="body" rows="3" placeholder="Write a message" required><?= htmlspecialchars($_POST['body'] ?? '') ?></textarea>
+        <button type="submit">Send</button>
     </form>
 
-    <?php if ($name !== ''): ?>
-        <p class="greeting">Hello, <?= htmlspecialchars($name) ?>! 👋</p>
+    <?php if ($error !== ''): ?>
+        <p class="error"><?= htmlspecialchars($error) ?></p>
+    <?php endif; ?>
+
+    <?php if ($messages): ?>
+        <ul class="messages">
+            <?php foreach ($messages as $m): ?>
+                <li>
+                    <div class="meta"><strong><?= htmlspecialchars($m['author']) ?></strong> · <?= htmlspecialchars(date('Y-m-d H:i', strtotime($m['created_at']))) ?></div>
+                    <div><?= nl2br(htmlspecialchars($m['body'])) ?></div>
+                </li>
+            <?php endforeach; ?>
+        </ul>
     <?php endif; ?>
 </body>
 </html>
